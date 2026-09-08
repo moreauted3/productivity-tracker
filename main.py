@@ -107,22 +107,124 @@ def rewrite_csv(username, tasks):
         writer.writeheader()
         writer.writerows(tasks)
 
+def return_to_homepage():
+    ask = str(input("Would you like to return to homepage? (y)es or (n)o"))
+    if ask =="y":
+        homepage(username)
+    else:
+        pass
+
+def handle_task_action(username, tasks):
+    if not tasks:
+        return
+
+    action = input("Would you like to (e)dit a task's status, (d)elete a task, or (b)ack? ").strip().lower()
+
+    if action == "e":
+        selected = select_task(tasks)
+        if selected:
+            update_task_status(username, selected)
+            return_to_homepage()
+
+    elif action == "d":
+        selected = select_task(tasks)
+        if selected:
+            delete_task(username, selected)
+            return_to_homepage()
+            
+
+    elif action == "b":
+        return
+
+    else:
+        print("Invalid choice.")
+    
 def homepage(username):
     tasks = load_tasks(username)
     todays_tasks = get_todays_tasks(tasks)
 
     if todays_tasks:
         choice = input("You have tasks logged today. View them (v) or add a new one (n)? ").strip().lower()
+
         if choice == "v":
             display_tasks(todays_tasks)
+            handle_task_action(username, todays_tasks)
+
         elif choice == "n":
             take_task(username)
+
     else:
         choice = input("No tasks today yet. Add a new one (n) or view your last 5 tasks (v)? ").strip().lower()
+
         if choice == "n":
             take_task(username)
+
         elif choice == "v":
-            display_tasks(tasks[-5:])
+            recent_tasks = tasks[-5:]
+            display_tasks(recent_tasks)
+            handle_task_action(username, recent_tasks)
+
+def delete_task(username, selected_task):
+    all_tasks = load_tasks(username)
+    remaining = [t for t in all_tasks if t["id"] != selected_task["id"]]
+    if len(remaining) == len(all_tasks):
+        print("Task not found — it may have been removed since you last viewed it.")
+        return
+    rewrite_csv(username, remaining)
+    print("Deleted.")
+
+
+def delete_tasks_by_date(username, target_date_str):
+    all_tasks = load_tasks(username)
+    to_delete = [t for t in all_tasks if t["date_of_creation"] == target_date_str]
+
+    if not to_delete:
+        print(f"No tasks found for {target_date_str}.")
+        return
+
+    display_tasks(to_delete)
+    confirm = input(f"Delete these {len(to_delete)} task(s)? (y/n): ").strip().lower()
+    if confirm != "y":
+        print("Cancelled.")
+        return
+
+    remaining = [t for t in all_tasks if t["date_of_creation"] != target_date_str]
+    rewrite_csv(username, remaining)
+    print(f"Deleted {len(to_delete)} task(s).")
+
+
+def delete_task(username, selected_task):
+    all_tasks = load_tasks(username)
+    remaining = [t for t in all_tasks if t["id"] != selected_task["id"]]
+    if len(remaining) == len(all_tasks):
+        print("Task not found — it may have been removed since you last viewed it.")
+        return
+    rewrite_csv(username, remaining)
+    print("Deleted.")
+
+
+def delete_tasks_by_date(username, target_date_str):
+    all_tasks = load_tasks(username)
+    to_delete = [t for t in all_tasks if t["date_of_creation"] == target_date_str]
+
+    if not to_delete:
+        print(f"No tasks found for {target_date_str}.")
+        return
+
+    display_tasks(to_delete)
+    confirm = input(f"Delete these {len(to_delete)} task(s)? (y/n): ").strip().lower()
+    if confirm != "y":
+        print("Cancelled.")
+        return
+
+    remaining = [t for t in all_tasks if t["date_of_creation"] != target_date_str]
+    rewrite_csv(username, remaining)
+    print(f"Deleted {len(to_delete)} task(s).")
+
+
+def delete_by_date_flow(username):
+    target_date_str = input("Enter date to delete tasks from (YYYY-MM-DD): ").strip()
+    delete_tasks_by_date(username, target_date_str)
 
 if __name__ == "__main__":
     username = input("Enter your username: ")
