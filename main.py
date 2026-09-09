@@ -19,14 +19,6 @@ def get_user_csv_path(username):
     return f"{username}_tasks.csv"
 
 
-def save_task(errand, username):
-    filepath = get_user_csv_path(username)
-    file_exists = os.path.isfile(filepath)
-    with open(filepath, mode="a", newline="") as f:
-        writer = csv.writer(f)
-        if not file_exists:
-            writer.writerow(["task", "date_of_creation", "status"])  # header, written once
-        writer.writerow(errand.to_row())
 
 
 def take_task(username):
@@ -69,10 +61,30 @@ def get_todays_tasks(tasks):
 
 def display_tasks(tasks):
     if not tasks:
-        print("No tasks to show.")
+        print("\nNo tasks to show.\n")
         return
+
+    fieldnames = list(tasks[0].keys())  # e.g. ['id', 'task', 'date_of_creation', 'status']
+    headers = ["#"] + [name.replace("_", " ").title() for name in fieldnames]
+
+    rows = []
     for i, t in enumerate(tasks, start=1):
-        print(f"{i}. [{t['status']}] {t['task']} ({t['date_of_creation']})")
+        rows.append([str(i)] + [str(t[name]) for name in fieldnames])
+
+    col_widths = [
+        max(len(headers[col]), max(len(row[col]) for row in rows))
+        for col in range(len(headers))
+    ]
+
+    def format_row(row):
+        return "  ".join(cell.ljust(col_widths[i]) for i, cell in enumerate(row))
+
+    print()  # space above the table
+    print(format_row(headers))
+    print("  ".join("-" * w for w in col_widths))
+    for row in rows:
+        print(format_row(row))
+    print()  # space below the table
 
 
 def select_task(tasks): ## should be used when stating variable value
@@ -107,7 +119,7 @@ def rewrite_csv(username, tasks):
         writer.writeheader()
         writer.writerows(tasks)
 
-def return_to_homepage():
+def return_to_homepage(username):
     ask = str(input("Would you like to return to homepage? (y)es or (n)o"))
     if ask =="y":
         homepage(username)
@@ -124,13 +136,13 @@ def handle_task_action(username, tasks):
         selected = select_task(tasks)
         if selected:
             update_task_status(username, selected)
-            return_to_homepage()
+            return_to_homepage(username)
 
     elif action == "d":
         selected = select_task(tasks)
         if selected:
             delete_task(username, selected)
-            return_to_homepage()
+            return_to_homepage(username)
             
 
     elif action == "b":
@@ -164,33 +176,6 @@ def homepage(username):
             display_tasks(recent_tasks)
             handle_task_action(username, recent_tasks)
 
-def delete_task(username, selected_task):
-    all_tasks = load_tasks(username)
-    remaining = [t for t in all_tasks if t["id"] != selected_task["id"]]
-    if len(remaining) == len(all_tasks):
-        print("Task not found — it may have been removed since you last viewed it.")
-        return
-    rewrite_csv(username, remaining)
-    print("Deleted.")
-
-
-def delete_tasks_by_date(username, target_date_str):
-    all_tasks = load_tasks(username)
-    to_delete = [t for t in all_tasks if t["date_of_creation"] == target_date_str]
-
-    if not to_delete:
-        print(f"No tasks found for {target_date_str}.")
-        return
-
-    display_tasks(to_delete)
-    confirm = input(f"Delete these {len(to_delete)} task(s)? (y/n): ").strip().lower()
-    if confirm != "y":
-        print("Cancelled.")
-        return
-
-    remaining = [t for t in all_tasks if t["date_of_creation"] != target_date_str]
-    rewrite_csv(username, remaining)
-    print(f"Deleted {len(to_delete)} task(s).")
 
 
 def delete_task(username, selected_task):
